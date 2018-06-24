@@ -1,0 +1,40 @@
+<template>
+  <require from="bulma/css/bulma.min.css"></require>
+  <require from="./product.html"></require>
+
+  <section class="section">
+    <div class="container">
+      <h1 class="title">OFF Category Tagger</h1>
+      <h2 class="subtitle">Match Products To Categories</h2>
+      <p>${message}</p>
+
+      <div class="card">
+        <header class="card-header">
+          <p class="card-header-title">
+            Is this a ${category}?
+          </p>
+        </header>
+        <div class="card-content">
+          <product code="1337"></product>
+        </div>
+        <footer class="card-footer">
+          <a href="#" class="card-footer-item" accesskey="y">Yes</a>
+          <a href="#" class="card-footer-item" accesskey="n">No</a>
+          <a href="#" class="card-footer-item" accesskey="d">Don't know</a>
+        </footer>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="content has-text-centered">
+      <p>
+        <strong>OFF Category Tagger</strong> by
+        <a href="https://hangy.de">hangy</a>. The source code is licensed
+        <a href="https://github.com/dittodhole/WTFNMFPLv3">WTFNMFPLv3</a>. The OpenFoodFacts data is licensed under the
+        <a href="https://opendatacommons.org/licenses/dbcl/1.0/">Database Contents License</a>, product photos are licensed
+        <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.en">CC BY-SA 3.0</a>.
+      </p>
+    </div>
+  </footer>
+</template>
