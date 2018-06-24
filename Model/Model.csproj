@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.ML" Version="0.2.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.6.1" />
   </ItemGroup>
 
 </Project>

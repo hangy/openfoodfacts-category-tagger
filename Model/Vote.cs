@@ -1,10 +1,16 @@
 namespace Model
 {
     using System;
+    using MongoDB.Bson;
+    using MongoDB.Driver;
 
     public class Vote
     {
-        public Guid VoterId { get; set; }
+        public ObjectId Id { get; set; }
+
+        public MongoDBRef Product { get; set; }
+
+        public MongoDBRef User { get; set; }
 
         public DateTimeOffset VotedAt { get; set; }
 
