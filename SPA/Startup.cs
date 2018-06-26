@@ -3,7 +3,9 @@ namespace SPA
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Security.Authentication;
     using System.Threading.Tasks;
+    using MediatR;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
@@ -11,6 +13,7 @@ namespace SPA
     using Microsoft.AspNetCore.SpaServices.Webpack;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
+    using MongoDB.Driver;
 
     public class Startup
     {
@@ -24,12 +27,22 @@ namespace SPA
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddMediatR(typeof(Startup).Assembly);
+
             services.Configure<CookiePolicyOptions>(options =>
             {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
+
+            services.AddScoped<IMongoClient>(svc => {
+                var settings = MongoClientSettings.FromUrl(new MongoUrl(this.Configuration["MongoDB"]));
+                settings.SslSettings = new SslSettings { EnabledSslProtocols = SslProtocols.Tls12 };
+                return new MongoClient(settings);
+            });
+
+            services.AddScoped<IMongoDatabase>(svc => svc.GetRequiredService<IMongoClient>().GetDatabase("tagger"));
 
             services.AddMvc()
                 .SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
