@@ -2,6 +2,7 @@ namespace CategoryPredictor
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Security.Authentication;
     using System.Threading.Tasks;
@@ -14,7 +15,6 @@ namespace CategoryPredictor
     using Microsoft.ML.Models;
     using MongoDB.Driver;
     using Model;
-    using System.Diagnostics;
 
     public class App
     {
@@ -47,22 +47,29 @@ namespace CategoryPredictor
         {
             var model = await PredictionModel.ReadAsync<Product, ProductCategoryPrediction>(modelPath).ConfigureAwait(false);
 
-            var client = this.CreateMongoClient();
-            var database = client.GetDatabase("tagger");
-            var collection = database.GetCollection<ProductPrediction>("prediction");
-
+            var predictions = new List<ProductPrediction>();
             using (var s = File.Open(csvPath, FileMode.Open))
             using (var r = new StreamReader(s))
             {
                 string line;
                 while ((line = await r.ReadLineAsync().ConfigureAwait(false)) != null)
                 {
-                    await PredictAsync(model, collection, line);
+                    var prediction = Predict(model, line);
+                    if (prediction != null)
+                    {
+                        predictions.Add(prediction);
+                    }
                 }
             }
+
+            var client = this.CreateMongoClient();
+            var database = client.GetDatabase("tagger");
+            var collection = database.GetCollection<ProductPrediction>("prediction");
+
+            await collection.InsertManyAsync(predictions).ConfigureAwait(false);
         }
 
-        private static async Task PredictAsync(PredictionModel<Product, ProductCategoryPrediction> model, IMongoCollection<ProductPrediction> collection, string line)
+        private static ProductPrediction Predict(PredictionModel<Product, ProductCategoryPrediction> model, string line)
         {
             var split = line.Split(separator, StringSplitOptions.None);
 
@@ -74,34 +81,35 @@ namespace CategoryPredictor
 
             if (string.IsNullOrWhiteSpace(p.Name) || !string.IsNullOrWhiteSpace(p.Categories))
             {
-                return;
+                return null;
             }
 
             var prediction = model.Predict(p);
             var hasScoreLabelNames = model.TryGetScoreLabelNames(out var scoreLabelNames);
             if (!hasScoreLabelNames)
             {
-                return;
+                return null;
             }
 
             var scoreForPrediction = GetScoreForLabel(scoreLabelNames, prediction);
             if (!scoreForPrediction.HasValue)
             {
-                return;
+                return null;
             }
 
             Console.WriteLine("{0}: {1} = {2} ({3:P5})", p.Code, p.Name, prediction.Category, scoreForPrediction);
 
-            if (!string.IsNullOrWhiteSpace(prediction.Category))
+            if (string.IsNullOrWhiteSpace(prediction.Category))
             {
-                await collection.InsertOneAsync(new ProductPrediction
-                {
-                    Code = p.Code,
-                    PredictedCategory = prediction.Category,
-                    PredictionScore = scoreForPrediction.Value
-                },
-                insertOneOptions);
+                return null;
             }
+
+            return new ProductPrediction
+            {
+                Code = p.Code,
+                PredictedCategory = prediction.Category,
+                PredictionScore = scoreForPrediction.Value
+            };
         }
 
         private static float? GetScoreForLabel(string[] scoreLabelNames, ProductCategoryPrediction prediction) => GetScoreForLabel(scoreLabelNames, prediction.Score, prediction.Category);
