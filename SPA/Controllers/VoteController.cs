@@ -22,6 +22,7 @@ namespace SPA.Controllers
         }
 
         [HttpPost]
+        [Route("vote/{code}")]
         public async Task<ActionResult<ObjectId>> Post([FromBody]AddVoteRequest request, CancellationToken cancellationToken)
         {
             return await this.mediator.Send(request, cancellationToken);
