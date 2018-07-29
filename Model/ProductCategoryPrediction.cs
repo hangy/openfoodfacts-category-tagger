@@ -6,5 +6,8 @@ namespace Model
     {
         [ColumnName("PredictedLabel")]
         public string Category;
+
+        [ColumnName("Score")]
+        public float[] Score;
     }
 }

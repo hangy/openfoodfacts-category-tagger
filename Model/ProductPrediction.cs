@@ -10,5 +10,7 @@ namespace Model
         public string Code { get; set; }
 
         public string PredictedCategory { get; set; }
+
+        public float PredictionScore { get; set; }
     }
 }

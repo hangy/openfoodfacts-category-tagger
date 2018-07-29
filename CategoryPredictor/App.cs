@@ -7,23 +7,26 @@ namespace CategoryPredictor
     using System.Threading.Tasks;
     using CommandDotNet.Attributes;
     using Microsoft.Extensions.Configuration;
-    using Microsoft.ML;    
+    using Microsoft.ML;
     using Microsoft.ML.Data;
     using Microsoft.ML.Trainers;
     using Microsoft.ML.Transforms;
     using Microsoft.ML.Models;
     using MongoDB.Driver;
     using Model;
+    using System.Diagnostics;
 
     public class App
     {
         private static readonly string[] separator = new[] { "\t" };
 
+        private static readonly InsertOneOptions insertOneOptions = new InsertOneOptions();
+
         public App()
         {
             var devEnvironmentVariable = Environment.GetEnvironmentVariable("NETCORE_ENVIRONMENT");
             var isDevelopment = string.IsNullOrEmpty(devEnvironmentVariable) || devEnvironmentVariable.ToLower() == "development";
-            
+
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -33,7 +36,7 @@ namespace CategoryPredictor
             {
                 builder.AddUserSecrets<App>();
             }
-            
+
             this.Configuration = builder.Build();
         }
 
@@ -73,17 +76,49 @@ namespace CategoryPredictor
             {
                 return;
             }
-            
+
             var prediction = model.Predict(p);
-            Console.WriteLine("{0}: {1} = {2}", p.Code, p.Name, prediction.Category);
+            var hasScoreLabelNames = model.TryGetScoreLabelNames(out var scoreLabelNames);
+            if (!hasScoreLabelNames)
+            {
+                return;
+            }
+
+            var scoreForPrediction = GetScoreForLabel(scoreLabelNames, prediction);
+            if (!scoreForPrediction.HasValue)
+            {
+                return;
+            }
+
+            Console.WriteLine("{0}: {1} = {2} ({3:P5})", p.Code, p.Name, prediction.Category, scoreForPrediction);
 
             if (!string.IsNullOrWhiteSpace(prediction.Category))
             {
-                await collection.InsertOneAsync(new ProductPrediction{
+                await collection.InsertOneAsync(new ProductPrediction
+                {
                     Code = p.Code,
-                    PredictedCategory = prediction.Category
-                });
+                    PredictedCategory = prediction.Category,
+                    PredictionScore = scoreForPrediction.Value
+                },
+                insertOneOptions);
             }
+        }
+
+        private static float? GetScoreForLabel(string[] scoreLabelNames, ProductCategoryPrediction prediction) => GetScoreForLabel(scoreLabelNames, prediction.Score, prediction.Category);
+
+        private static float? GetScoreForLabel(string[] scoreLabelNames, float[] scores, string predictedLabel)
+        {
+            Debug.Assert(scoreLabelNames.Length == scores.Length);
+
+            for (var index = 0; index < scoreLabelNames.Length; ++index)
+            {
+                if (scoreLabelNames[index] == predictedLabel)
+                {
+                    return scores[index];
+                }
+            }
+
+            return null;
         }
 
         private MongoClient CreateMongoClient()
