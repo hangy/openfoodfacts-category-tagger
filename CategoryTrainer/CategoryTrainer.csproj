@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandDotNet" Version="2.6.7" />
+    <PackageReference Include="CommandDotNet" Version="2.7.5" />
     <PackageReference Include="Microsoft.ML" Version="0.3.0" />
   </ItemGroup>
 
